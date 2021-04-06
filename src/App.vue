@@ -92,10 +92,9 @@ export default {
       const getListByKey = (arr, key) => {
         return [...new Set(arr.map((e) => e[key]))];
       };
-      const keys = [...rowKey];
       const initBase = () => {
         if (!list) {
-          const key = keys.shift();
+          const key = rowKey[0];
           list = getListByKey(rows, key).map((title) => ({
             title,
             key: getUid(),
