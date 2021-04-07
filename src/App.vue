@@ -87,7 +87,6 @@ export default {
     columnsCol() {
       let list;
       const rows = this.proxyList;
-      const { xAxis = [] } = this.source.option;
       const { rowKey } = this;
       const getListByKey = (arr, key) => {
         return [...new Set(arr.map((e) => e[key]))];
@@ -107,18 +106,18 @@ export default {
         const lastKey = keyList.shift();
         const key = keyList[0];
         if (!key) return;
-        arr.forEach(e => {
+        arr.forEach((e) => {
           const islaster = keyList.length === 1;
-          const filterData = source.filter(ele => e.title === ele[lastKey]);
+          const filterData = source.filter((ele) => e.title === ele[lastKey]);
           // 过滤列表中含有的则为下级菜单的数据
-          e.children = getListByKey(filterData, key).map(title => {
-              const res = { title, key: getUid() };
-              if (islaster) {
-                const obj = filterData.find(e => e[key] === title);
-                res.customRender = () => xAxis.map(e=> [<p>{obj[e.key]}</p>]);
-              }
-              return res;
-            });
+          e.children = getListByKey(filterData, key).map((title) => {
+            const res = { title, key: getUid() };
+            if (islaster) {
+              const obj = filterData.find((e) => e[key] === title);
+              res.dataIndex = obj.uid;
+            }
+            return res;
+          });
           setChildren(e.children, keyList, filterData);
         });
       };
@@ -153,7 +152,13 @@ export default {
     },
     colList() {
       const { xAxis = [] } = this.source.option;
-      return setUid(xAxis.map(e => ({ key: e.key })));
+      const { proxyList } = this;
+      return xAxis.map((e) =>
+        proxyList.reduce(
+          (target, item) => Object.assign(target, { [item.uid]: item[e.key] }),
+          {}
+        )
+      );
       // const { option: { xAxis } } = this.source;
       // const firstColumn = xAxis[0];
       // const { key, title } = firstColumn;
