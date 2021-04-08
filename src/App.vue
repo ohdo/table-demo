@@ -20,7 +20,7 @@ const setUid = (list = []) => {
   });
   return list;
 };
-
+const mapByKey = (list, key) => list.reduce((target, item) => Object.assign(target, { [item[key]]: item }), {});
 const dragGroupMap = {
   measure: "度量",
 };
@@ -43,7 +43,7 @@ export default {
      * 列 - key映射表
      */
     seriesMap() {
-      return this.series.reduce((target, item) => Object.assign(target, { [item.key]: item }), {});
+      return mapByKey(this.series, 'key');
     },
     /**
      * 行
