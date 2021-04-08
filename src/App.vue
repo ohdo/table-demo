@@ -1,25 +1,12 @@
 <template>
   <div id="app">
-    <!-- <a-table style="width: 60vw" :columns="[...columns, tableColums]" :dataSource="dataSource" :pagination="false">
-      <template #hospital="val, record, index">
-        <span @click="zuanqu(record)">{{ val }}</span>
-      </template>
-      <template #table="val, record, index">
-        <a-table :columns="columns" :dataSource="dataSource" :pagination="false"/>
-      </template>
-    </a-table> -->
-    <a-button @click="isRow = !isRow"> change </a-button>
     <a-table
       style="width: 60vw"
       rowKey="uid"
       :columns="columns"
       :dataSource="dataSource"
       :pagination="false"
-    >
-      <template #hospital="val, record, index">
-        <span @click="zuanqu(record)">{{ val }}</span>
-      </template>
-    </a-table>
+    />
   </div>
 </template>
 
@@ -42,75 +29,77 @@ export default {
   data() {
     return {
       source,
-      tableColums: { title: "table", scopedSlots: { customRender: "table" } },
-      isRow: false,
     };
   },
   computed: {
-    noSeries() {
-      const { series = [] } = this.source.option;
-      return !series.length;
-    },
-    columnsRow() {
-      const { series, xAxis } = this.source.option;
-      const columns1 = xAxis.map((e) => {
-        const { title, key } = e;
-        return {
-          title,
-          key,
-          dataIndex: key,
-          scopedSlots: { customRender: key },
-        };
-      });
-      const columns2 = series.map((e) => {
-        const { key, title } = e;
-        return {
-          title,
-          key,
-          dataIndex: key,
-          scopedSlots: { customRender: key },
-        };
-      });
-      const columns = [...columns1, ...columns2];
-      return columns;
-    },
+    /**
+     * 列
+     */
     series() {
       const { series = [] } = this.source.option;
       return series;
     },
+    /**
+     * 列 - key映射表
+     */
+    seriesMap() {
+      return this.series.reduce((target, item) => Object.assign(target, { [item.key]: item }), {});
+    },
+    /**
+     * 行
+     */
+    xAxis() {
+      const { xAxis = [] } = this.source.option;
+      return xAxis;
+    },
+    /**
+     * 无 行
+     */
+    noXAxis() {
+      return this.xAxis.length === 0;
+    },
+    /**
+     * 数据来源
+     */
     rows() {
       return this.source.rows || [];
     },
+    /**
+     * 列的key提取
+     */
     rowKey() {
       return this.series.map((e) => e.key);
     },
-    columnsCol() {
+    /**
+     * table - 列
+     */
+    columns() {
       let list;
       const rows = this.proxyList;
-      const { rowKey } = this;
+      const { rowKey, seriesMap, xAxis, noXAxis, series } = this;
+      // @method 获取数组 属性为key 的去重列表
       const getListByKey = (arr, key) => {
         return [...new Set(arr.map((e) => e[key]))];
       };
-      const initBase = () => {
-        if (!list) {
-          const key = rowKey[0];
-          list = getListByKey(rows, key).map((title) => ({
-            title,
-            key: getUid(),
-            dataIndex: key,
-          }));
-        }
-      };
-      const setChildren = (arr, keys, source) => {
-        const keyList = [...keys];
-        const lastKey = keyList.shift();
-        const key = keyList[0];
-        if (!key) return;
-        arr.forEach((e) => {
-          const islaster = keyList.length === 1;
-          const filterData = source.filter((ele) => e.title === ele[lastKey]);
+      /**
+       * @method 获取children
+       * isFirstColumn：是否为第一列
+       * islaster：是否为最后一条数据（PS：最后一条数据需要添加dataIndex）
+       * filterData：创建children需要使用的列表数据
+       * key：当前children对应的key
+       */
+      const getChlidren = (isFirstColumn, islaster, filterData, key) => {
+        if (isFirstColumn && !noXAxis) {
+          const res = { title: seriesMap[key].title, key: getUid() };
+          if (islaster) {
+            const { dragGroup } = xAxis[0];
+            res.title = dragGroupMap[dragGroup];
+            res.dataIndex = dragGroup;
+          }
+          return [res];
+        } else {
           // 过滤列表中含有的则为下级菜单的数据
-          e.children = getListByKey(filterData, key).map((title) => {
+          return getListByKey(filterData, key).map((title) => {
             const res = { title, key: getUid() };
             if (islaster) {
               const obj = filterData.find((e) => e[key] === title);
@@ -118,89 +107,60 @@ export default {
             }
             return res;
           });
+        }
+      }
+      // @methods 初始化一级表头
+      const initBase = () => {
+        if (!list) {
+          const key = rowKey[0];
+          const [ firstColumn ] = getChlidren(true, series.length <= 1, rows, key);
+          const keyList = getChlidren(false, series.length <= 1, rows, key);
+          list = noXAxis ? keyList : [ firstColumn, ...keyList ];
+        }
+      };
+      // @methods 根据一级表头设置children
+      const setChildren = (arr, keys, source) => {
+        const keyList = [...keys];
+        const lastKey = keyList.shift();
+        const key = keyList[0];
+        if (!key) return;
+        arr.forEach((e, index) => {
+          const isFirstColumn = index === 0;
+          const islaster = keyList.length === 1;
+          const filterData = source.filter((ele) => e.title === ele[lastKey]);
+          e.children = getChlidren(isFirstColumn, islaster, filterData, key);
           setChildren(e.children, keyList, filterData);
         });
       };
       initBase();
       setChildren(list, rowKey, rows);
       return list;
-      // const columns = [];
-      // const { option: { xAxis } } = this.source;
-      // const firstColumn = xAxis[0];
-      // if (!this.noSeries) {
-      //   const key = firstColumn.key;
-      //   columns.push({
-      //     title: firstColumn.title,
-      //     key,
-      //     dataIndex: key,
-      //     scopedSlots: { customRender: key },
-      //   });
-      // }
-      // this.proxyList.forEach(e => {
-      //   const key = e.uid;
-      //   columns.push({
-      //     title: e[firstColumn.key],
-      //     key,
-      //     dataIndex: key,
-      //     scopedSlots: { customRender: key },
-      //   });
-      // });
-      // return  columns;
     },
+    /**
+     * 数据来源 - 代理 增加uid供映射转换使用
+     */
     proxyList() {
       return setUid(this.source.rows);
     },
-    colList() {
-      const { xAxis = [] } = this.source.option;
+    /**
+     * table 列表基础数据组装
+     */
+    list() {
       const { proxyList } = this;
-      return xAxis.map((e) =>
+      return this.xAxis.map(({dragGroup, ...e}) =>
         proxyList.reduce(
           (target, item) => Object.assign(target, { [item.uid]: item[e.key] }),
-          {}
+          { [dragGroup]: e.title }
         )
       );
-      // const { option: { xAxis } } = this.source;
-      // const firstColumn = xAxis[0];
-      // const { key, title } = firstColumn;
-      // const list = [...this.columnsRow];
-      // list.shift();
-      // const { proxyList } = this;
-      // return list.map(e => proxyList.reduce((target, ele) => Object.assign(target, { [ele.uid]: ele[e.key] }), { [key]: e.title }));
     },
-    columns() {
-      return this.isRow ? this.columnsRow : this.columnsCol;
-    },
-    dataSource() {
-      const list = this.isRow ? this.proxyList : this.colList;
-      return setUid(list);
-    },
-    zuanquMap() {
-      if (!this.isRow) return {};
-      const { drills = [] } = this.source.option;
-      return drills.reduce(
-        (target, item) => Object.assign(target, { [item.key]: item }),
-        {}
-      );
-    },
-  },
-  methods: {
     /**
-     * 钻取 TODO:
-     * 1. 获取钻取下一级的数据
+     * table 列表基础数据 增加uid
      */
-    zuanqu(record) {
-      // TODO: 获取钻取下一级数据
-      console.log("钻取, 调用接口");
-    },
-    getKey(item) {
-      return this.rowKey
-        .reduce((e, key) => {
-          e.push(item[key]);
-          return e;
-        }, [])
-        .join("*");
-    },
-  },
+    dataSource() {
+      return setUid(this.list);
+    }
+  }
 };
 </script>
 
