@@ -33,9 +33,7 @@ const getDragName = (xAxis) => {
   const { displayName, dragGroup } = xAxis;
   return dragGroupMap[dragGroup] || displayName;
 };
-const getDragGroupKey = ({ dragGroup }) => dragGroup;
-const getDataIndex = (obj) =>
-  obj.columnDataType === "INT" ? getDragGroupKey(obj) : obj.key;
+const getDataIndex = (obj) => obj.columnDataType === "INT" ? obj.dragGroup : obj.key;
 const getUnikey = (keys, item) => keys.map((k) => item[k]).join("-");
 export default {
   name: "App",
