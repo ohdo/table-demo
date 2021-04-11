@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import source from "./data2.json";
+import source from "./data3.json";
 var uid = 0;
 const getUid = () => ++uid;
 const setUid = (list = []) => {
@@ -23,6 +23,10 @@ const setUid = (list = []) => {
 const mapByKey = (list, key) => list.reduce((target, item) => Object.assign(target, { [item[key]]: item }), {});
 const dragGroupMap = {
   measure: "度量",
+};
+const getDragName = (xAxis) => {
+  const { displayName, dragGroup } = xAxis;
+  return dragGroupMap[dragGroup] || displayName;
 };
 export default {
   name: "App",
@@ -92,9 +96,10 @@ export default {
         if (isFirstColumn && !noXAxis) {
           const res = { title: seriesMap[key].title, key: getUid() };
           if (islaster) {
-            const { dragGroup } = xAxis[0];
-            res.title = dragGroupMap[dragGroup];
-            res.dataIndex = dragGroup;
+            const obj = xAxis[0];
+            res.title = getDragName(obj);
+            // res.customRender = () => []
+            res.dataIndex = obj.dragGroup;
           }
           return [res];
         } else {
@@ -119,17 +124,17 @@ export default {
         }
       };
       // @methods 根据一级表头设置children
-      const setChildren = (arr, keys, source) => {
+      const setChildren = (arr, keys, source, i = 0) => {
         const keyList = [...keys];
         const lastKey = keyList.shift();
         const key = keyList[0];
         if (!key) return;
         arr.forEach((e, index) => {
-          const isFirstColumn = index === 0;
+          const isFirstColumn = i + index;
           const islaster = keyList.length === 1;
           const filterData = source.filter((ele) => e.title === ele[lastKey]);
-          e.children = getChlidren(isFirstColumn, islaster, filterData, key);
-          setChildren(e.children, keyList, filterData);
+          e.children = getChlidren(isFirstColumn === 0, islaster, filterData, key);
+          setChildren(e.children, keyList, filterData, isFirstColumn);
         });
       };
       initBase();
