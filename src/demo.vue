@@ -7,7 +7,11 @@
       :columns="columns"
       :dataSource="dataSource"
       :pagination="{ pageSize: 10 }"
-    />
+    >
+      <template v-for="propKey in t_list" #[propKey]="text, record">
+        <span @click="onChange(record, propKey)">{{text}}</span>
+      </template>
+    </a-table>
   </div>
 </template>
 
@@ -41,6 +45,7 @@ export default {
   data() {
     return {
       source,
+      t_list: ['physician']
     };
   },
   computed: {
@@ -140,6 +145,7 @@ export default {
         key: getUid(),
         title: getDragName(e),
         dataIndex: getDataIndex(e),
+        scopedSlots: { customRender: getDataIndex(e) } // TODO:
       }));
     },
     lastColumn() {
@@ -360,6 +366,9 @@ export default {
     getuuid(item) {
       return this.proxySeries.filter(e => e.columnDataType !== "INT").map((e) => item[e.key]).join("-");
     },
+    onChange(record) {
+      console.log(record);
+    }
   },
 };
 </script>
